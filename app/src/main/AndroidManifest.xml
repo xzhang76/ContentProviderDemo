@@ -16,6 +16,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <provider
+            android:permission="com.demo.PROVIDER"
+            android:authorities="com.demo.contentproviderdemo.provider"
+            android:name=".provider.BookProvider"
+            android:process=":provider">
+        </provider>
+
     </application>
 
 </manifest>
