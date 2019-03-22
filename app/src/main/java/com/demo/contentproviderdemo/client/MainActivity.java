@@ -15,6 +15,7 @@ import com.demo.contentproviderdemo.provider.BookProvider;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
@@ -36,7 +37,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         layoutManager.setOrientation(OrientationHelper.VERTICAL);
         recyclerView.setAdapter(mAdapter);
         recyclerView.addItemDecoration(new DividerItemDecoration(this, DividerItemDecoration.VERTICAL));
-
     }
 
     @Override
@@ -44,8 +44,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         int id = v.getId();
         if (id == R.id.add_book) {
             ContentValues values = new ContentValues();
-            values.put("_id", 0);
-            values.put("name", "Android开发艺术探索");
+            int index = new Random().nextInt(100);
+            values.put("_id", index);
+            values.put("name", "Android开发艺术探索" + index);
+            values.put("author", "ryg");
             getContentResolver().insert(BookProvider.BOOK_CONTENT_URI, values);
 
         } else if (id == R.id.get_books) {
@@ -54,10 +56,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             } else {
                 mBooks.clear();
             }
-            Cursor bookCursor = getContentResolver().query(BookProvider.BOOK_CONTENT_URI, new String[]{"_id", "name"}, null, null, null);
-            while (bookCursor.moveToNext()) {
-                Book book = new Book(bookCursor.getString(1), bookCursor.getInt(0) + "");
-                mBooks.add(book);
+            Cursor bookCursor = getContentResolver().query(BookProvider.BOOK_CONTENT_URI, new String[]{"_id", "name", "author"}, null, null, null);
+            if (bookCursor != null) {
+                while (bookCursor.moveToNext()) {
+                    Book book = new Book(bookCursor.getString(1), bookCursor.getString(2));
+                    mBooks.add(book);
+                }
+                bookCursor.close();
             }
             mAdapter.updateBooks(mBooks);
         }

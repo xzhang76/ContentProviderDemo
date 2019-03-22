@@ -2,7 +2,6 @@ package com.demo.contentproviderdemo.provider;
 
 import android.content.ContentProvider;
 import android.content.ContentValues;
-import android.content.Context;
 import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -32,7 +31,7 @@ public class BookProvider extends ContentProvider {
         sUriMatcher.addURI(AUTHORITY, "user", USER_URI_CODE);
     }
 
-    private SQLiteDatabase mDbDataBase;
+    private DbOpenHelper mDbHelper;
 
     @Override
     public boolean onCreate() {
@@ -42,17 +41,10 @@ public class BookProvider extends ContentProvider {
     }
 
     private void initProviderData() {
-        mDbDataBase = new DbOpenHelper(getContext()).getWritableDatabase();
-        mDbDataBase.execSQL("delete from " + DbOpenHelper.BOOK_TABLE_NAME);
-        mDbDataBase.execSQL("delete from " + DbOpenHelper.USER_TABLE_NAME);
-
-        //添加几条数据
-        mDbDataBase.execSQL("insert into book values(3,'Android');");
-        mDbDataBase.execSQL("insert into book values(4,'SQLite');");
-        mDbDataBase.execSQL("insert into book values(5,'IOS');");
-        mDbDataBase.execSQL("insert into user values(1,'xzhang',0);");
-        mDbDataBase.execSQL("insert into user values(2,'james',1);");
-        mDbDataBase.execSQL("insert into user values(3,'stephon',0);");
+        mDbHelper = new DbOpenHelper(getContext());
+        SQLiteDatabase writableDatabase = mDbHelper.getWritableDatabase();
+        writableDatabase.execSQL("delete from " + DbOpenHelper.BOOK_TABLE_NAME);
+        writableDatabase.execSQL("delete from " + DbOpenHelper.USER_TABLE_NAME);
     }
 
     @Nullable
@@ -63,7 +55,11 @@ public class BookProvider extends ContentProvider {
         if (null == tableName) {
             throw new IllegalArgumentException("Unsupported uri: " + uri);
         }
-        return mDbDataBase.query(tableName, projection, selection, selectionArgs, null, sortOrder, null, null);
+        SQLiteDatabase readableDatabase = mDbHelper.getReadableDatabase();
+        if (readableDatabase.isOpen()) {
+            return readableDatabase.query(tableName, projection, selection, selectionArgs, null, sortOrder, null, null);
+        }
+        return null;
     }
 
     @Nullable
@@ -81,8 +77,11 @@ public class BookProvider extends ContentProvider {
         if (tableName == null) {
             throw new IllegalArgumentException("Unsupported uri: " + uri);
         }
-        mDbDataBase.insert(tableName, null, values);
-        getContext().getContentResolver().notifyChange(uri, null);
+        SQLiteDatabase writableDatabase = mDbHelper.getWritableDatabase();
+        if (writableDatabase.isOpen()) {
+            writableDatabase.insert(tableName, null, values);
+            getContext().getContentResolver().notifyChange(uri, null);
+        }
         return null;
     }
 
@@ -93,9 +92,13 @@ public class BookProvider extends ContentProvider {
         if (tableName == null) {
             throw new IllegalArgumentException("Unsupported uri: " + uri);
         }
-        int count = mDbDataBase.delete(tableName, selection, selectionArgs);
-        if (count > 0) {
-            getContext().getContentResolver().notifyChange(uri, null);
+        SQLiteDatabase writableDatabase = mDbHelper.getWritableDatabase();
+        int count = 0;
+        if (writableDatabase.isOpen()) {
+            count = writableDatabase.delete(tableName, selection, selectionArgs);
+            if (count > 0) {
+                getContext().getContentResolver().notifyChange(uri, null);
+            }
         }
         return count;
     }
@@ -107,9 +110,13 @@ public class BookProvider extends ContentProvider {
         if (tableName == null) {
             throw new IllegalArgumentException("Unsupported uri: " + uri);
         }
-        int row = mDbDataBase.update(tableName, values, selection, selectionArgs);
-        if (row > 0) {
-            getContext().getContentResolver().notifyChange(uri, null);
+        int row = 0;
+        SQLiteDatabase writableDatabase = mDbHelper.getWritableDatabase();
+        if (writableDatabase.isOpen()) {
+            row = writableDatabase.update(tableName, values, selection, selectionArgs);
+            if (row > 0) {
+                getContext().getContentResolver().notifyChange(uri, null);
+            }
         }
         return row;
     }

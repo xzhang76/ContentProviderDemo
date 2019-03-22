@@ -14,7 +14,7 @@ public class DbOpenHelper extends SQLiteOpenHelper{
 
     //图书馆和用户信息表
     private String CREATE_BOOK_TABLE = "CREATE TABLE IF NOT EXISTS "
-            + BOOK_TABLE_NAME + "(_id INTEGER PRIMARY KEY," + "name TEXT)";
+            + BOOK_TABLE_NAME + "(_id INTEGER PRIMARY KEY," + "name TEXT, " + "author TEXT)";
     private String CREATE_USER_TABLE = "CREATE TABLE IF NOT EXISTS "
             + USER_TABLE_NAME + "(_id INTEGER PRIMARY KEY," + "name TEXT," + "sex INT)";
 
