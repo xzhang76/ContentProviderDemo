@@ -1,6 +1,7 @@
 package com.demo.contentproviderdemo.provider;
 
 import android.content.ContentProvider;
+import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.UriMatcher;
 import android.database.Cursor;
@@ -17,15 +18,38 @@ public class BookProvider extends ContentProvider {
 
     public static final String AUTHORITY = "com.demo.contentproviderdemo.provider";
 
-    public static final Uri QUERY_ITEM_URI = Uri.parse("content://" + AUTHORITY + "/book");
+    private static final String PATH_INSERT = "book/insert";
+    private static final String PATH_DELETE = "book/delete";
+    private static final String PATH_UPDATE = "book/update";
+    private static final String PATH_QUERY_ITEM = "book/query/#";
+    private static final String PATH_QUERY_ALL = "book/query/*";
 
-    public static final int BOOK_URI_CODE = 0;
+    public static final Uri INSERT_URI = Uri.parse("content://" + AUTHORITY + "/" + PATH_INSERT);
+    public static final Uri DELETE_URI = Uri.parse("content://" + AUTHORITY + "/" + PATH_DELETE);
+    public static final Uri UPDATE_URI = Uri.parse("content://" + AUTHORITY + "/" + PATH_UPDATE);
+    public static final Uri QUERY_ITEM_URI = Uri.parse("content://" + AUTHORITY + "/" + PATH_QUERY_ITEM);
+    public static final Uri QUERY_ALL_URI = Uri.parse("content://" + AUTHORITY + "/" + PATH_QUERY_ALL);
+
+    private static final int INSERT_URI_CODE = 0;
+    private static final int DELETE_URI_CODE = 1;
+    private static final int UPDATE_URI_CODE = 2;
+    private static final int QUERY_ITEM_URI_CODE = 3;
+    private static final int QUERY_ALL_URI_CODE = 4;
+
+    public static final String KEY_ID = "_id";
+    public static final String KEY_NAME = "name";
+    public static final String KEY_AUTHOR = "author";
 
     private static final UriMatcher sUriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
 
     //uri和code之间建立对应关系
     static {
-        sUriMatcher.addURI(AUTHORITY, "book", BOOK_URI_CODE);
+        sUriMatcher.addURI(AUTHORITY, PATH_INSERT, INSERT_URI_CODE);
+        sUriMatcher.addURI(AUTHORITY, PATH_DELETE, DELETE_URI_CODE);
+        sUriMatcher.addURI(AUTHORITY, PATH_UPDATE, UPDATE_URI_CODE);
+        sUriMatcher.addURI(AUTHORITY, PATH_QUERY_ITEM, QUERY_ITEM_URI_CODE);
+        sUriMatcher.addURI(AUTHORITY, PATH_QUERY_ALL, QUERY_ALL_URI_CODE);
+
     }
 
     private DbOpenHelper mDbHelper;
@@ -48,8 +72,27 @@ public class BookProvider extends ContentProvider {
     public Cursor query(@NonNull Uri uri, @Nullable String[] projection, @Nullable String selection, @Nullable String[] selectionArgs, @Nullable String sortOrder) {
         Log.d(TAG, "query(), current thread: " + Thread.currentThread());
         SQLiteDatabase readableDatabase = mDbHelper.getReadableDatabase();
-        if (readableDatabase.isOpen()) {
-            return readableDatabase.query(DbOpenHelper.BOOK_TABLE_NAME, projection, selection, selectionArgs, null, sortOrder, null, null);
+        switch (sUriMatcher.match(uri)) {
+            case QUERY_ALL_URI_CODE:
+                if (readableDatabase.isOpen()) {
+                    Cursor cursor = readableDatabase.query(DbOpenHelper.BOOK_TABLE_NAME, projection,
+                            selection, selectionArgs, null, sortOrder, null, null);
+                    cursor.setNotificationUri(getContext().getContentResolver(), uri);
+                    return cursor;
+                }
+                break;
+            case QUERY_ITEM_URI_CODE:
+                if (readableDatabase.isOpen()) {
+                    //单独传一个id进来
+                    long id = ContentUris.parseId(uri);
+                    Cursor cursor = readableDatabase.query(DbOpenHelper.BOOK_TABLE_NAME, projection,
+                            KEY_ID + "=?", new String[]{id + ""}, null, sortOrder, null, null);
+                    cursor.setNotificationUri(getContext().getContentResolver(), uri);
+                    return cursor;
+                }
+                break;
+            default:
+                throw new IllegalArgumentException("query(), Unsupported uri: " + uri);
         }
         return null;
     }
@@ -58,7 +101,18 @@ public class BookProvider extends ContentProvider {
     @Override
     public String getType(@NonNull Uri uri) {
         Log.d(TAG, "getType(), current thread: " + Thread.currentThread());
-        return null;
+        String type = null;
+        switch (sUriMatcher.match(uri)) {
+            case QUERY_ITEM_URI_CODE:
+                type = "vnd.android.cursor.item/book";
+                break;
+            case QUERY_ALL_URI_CODE:
+                type = "vnd.android.cursor.dir/book";
+                break;
+            default:
+                break;
+        }
+        return type;
     }
 
     @Nullable
@@ -66,9 +120,18 @@ public class BookProvider extends ContentProvider {
     public Uri insert(@NonNull Uri uri, @Nullable ContentValues values) {
         Log.d(TAG, "insert()");
         SQLiteDatabase writableDatabase = mDbHelper.getWritableDatabase();
-        if (writableDatabase.isOpen()) {
-            writableDatabase.insert(DbOpenHelper.BOOK_TABLE_NAME, null, values);
-            getContext().getContentResolver().notifyChange(uri, null);
+        switch (sUriMatcher.match(uri)) {
+            case INSERT_URI_CODE:
+                if (writableDatabase.isOpen()) {
+                    long id = writableDatabase.insert(DbOpenHelper.BOOK_TABLE_NAME, null, values);
+                    writableDatabase.close();
+                    Uri newUri = ContentUris.withAppendedId(uri, id);
+                    getContext().getContentResolver().notifyChange(newUri, null);
+                    return newUri;
+                }
+                break;
+            default:
+                throw new IllegalArgumentException("insert(), Unsupported uri: " + uri);
         }
         return null;
     }
@@ -77,28 +140,43 @@ public class BookProvider extends ContentProvider {
     public int delete(@NonNull Uri uri, @Nullable String selection, @Nullable String[] selectionArgs) {
         Log.d(TAG, "delete()");
         SQLiteDatabase writableDatabase = mDbHelper.getWritableDatabase();
-        int count = 0;
-        if (writableDatabase.isOpen()) {
-            count = writableDatabase.delete(DbOpenHelper.BOOK_TABLE_NAME, selection, selectionArgs);
-            if (count > 0) {
-                getContext().getContentResolver().notifyChange(uri, null);
-            }
+        switch (sUriMatcher.match(uri)) {
+            case DELETE_URI_CODE:
+                int count = 0;
+                if (writableDatabase.isOpen()) {
+                    count = writableDatabase.delete(DbOpenHelper.BOOK_TABLE_NAME, selection, selectionArgs);
+                    writableDatabase.close();
+                    if (count > 0) {
+                        getContext().getContentResolver().notifyChange(uri, null);
+                        return count;
+                    }
+                }
+                break;
+            default:
+                throw new IllegalArgumentException("insert(), Unsupported uri: " + uri);
         }
-        return count;
+        return 0;
     }
 
     @Override
     public int update(@NonNull Uri uri, @Nullable ContentValues values, @Nullable String selection, @Nullable String[] selectionArgs) {
         Log.d(TAG, "update()");
-        int row = 0;
         SQLiteDatabase writableDatabase = mDbHelper.getWritableDatabase();
-        if (writableDatabase.isOpen()) {
-            row = writableDatabase.update(DbOpenHelper.BOOK_TABLE_NAME, values, selection, selectionArgs);
-            if (row > 0) {
-                getContext().getContentResolver().notifyChange(uri, null);
-            }
+        switch (sUriMatcher.match(uri)) {
+            case UPDATE_URI_CODE:
+                if (writableDatabase.isOpen()) {
+                    int row = writableDatabase.update(DbOpenHelper.BOOK_TABLE_NAME, values, selection, selectionArgs);
+                    writableDatabase.close();
+                    if (row > 0) {
+                        getContext().getContentResolver().notifyChange(uri, null);
+                        return row;
+                    }
+                }
+                break;
+            default:
+                throw new IllegalArgumentException("insert(), Unsupported uri: " + uri);
         }
-        return row;
+        return 0;
     }
 
 }

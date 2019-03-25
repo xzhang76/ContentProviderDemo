@@ -48,7 +48,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             values.put("_id", index);
             values.put("name", "Android开发艺术探索" + index);
             values.put("author", "ryg");
-            getContentResolver().insert(BookProvider.QUERY_ITEM_URI, values);
+            getContentResolver().insert(BookProvider.INSERT_URI, values);
 
         } else if (id == R.id.get_books) {
             if (mBooks == null) {
@@ -56,7 +56,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             } else {
                 mBooks.clear();
             }
-            Cursor bookCursor = getContentResolver().query(BookProvider.QUERY_ITEM_URI, new String[]{"_id", "name", "author"}, null, null, null);
+            Cursor bookCursor = getContentResolver().query(BookProvider.QUERY_ALL_URI, new String[]{BookProvider.KEY_ID, BookProvider.KEY_NAME, BookProvider.KEY_AUTHOR}, null, null, null);
             if (bookCursor != null) {
                 while (bookCursor.moveToNext()) {
                     Book book = new Book(bookCursor.getString(1), bookCursor.getString(2));
