@@ -17,18 +17,15 @@ public class BookProvider extends ContentProvider {
 
     public static final String AUTHORITY = "com.demo.contentproviderdemo.provider";
 
-    public static final Uri BOOK_CONTENT_URI = Uri.parse("content://" + AUTHORITY + "/book");
-    public static final Uri USER_CONTENT_URI = Uri.parse("content://" + AUTHORITY + "/user");
+    public static final Uri QUERY_ITEM_URI = Uri.parse("content://" + AUTHORITY + "/book");
 
     public static final int BOOK_URI_CODE = 0;
-    public static final int USER_URI_CODE = 1;
 
     private static final UriMatcher sUriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
 
     //uri和code之间建立对应关系
     static {
         sUriMatcher.addURI(AUTHORITY, "book", BOOK_URI_CODE);
-        sUriMatcher.addURI(AUTHORITY, "user", USER_URI_CODE);
     }
 
     private DbOpenHelper mDbHelper;
@@ -44,20 +41,15 @@ public class BookProvider extends ContentProvider {
         mDbHelper = new DbOpenHelper(getContext());
         SQLiteDatabase writableDatabase = mDbHelper.getWritableDatabase();
         writableDatabase.execSQL("delete from " + DbOpenHelper.BOOK_TABLE_NAME);
-        writableDatabase.execSQL("delete from " + DbOpenHelper.USER_TABLE_NAME);
     }
 
     @Nullable
     @Override
     public Cursor query(@NonNull Uri uri, @Nullable String[] projection, @Nullable String selection, @Nullable String[] selectionArgs, @Nullable String sortOrder) {
         Log.d(TAG, "query(), current thread: " + Thread.currentThread());
-        String tableName = getTabName(uri);
-        if (null == tableName) {
-            throw new IllegalArgumentException("Unsupported uri: " + uri);
-        }
         SQLiteDatabase readableDatabase = mDbHelper.getReadableDatabase();
         if (readableDatabase.isOpen()) {
-            return readableDatabase.query(tableName, projection, selection, selectionArgs, null, sortOrder, null, null);
+            return readableDatabase.query(DbOpenHelper.BOOK_TABLE_NAME, projection, selection, selectionArgs, null, sortOrder, null, null);
         }
         return null;
     }
@@ -73,13 +65,9 @@ public class BookProvider extends ContentProvider {
     @Override
     public Uri insert(@NonNull Uri uri, @Nullable ContentValues values) {
         Log.d(TAG, "insert()");
-        String tableName = getTabName(uri);
-        if (tableName == null) {
-            throw new IllegalArgumentException("Unsupported uri: " + uri);
-        }
         SQLiteDatabase writableDatabase = mDbHelper.getWritableDatabase();
         if (writableDatabase.isOpen()) {
-            writableDatabase.insert(tableName, null, values);
+            writableDatabase.insert(DbOpenHelper.BOOK_TABLE_NAME, null, values);
             getContext().getContentResolver().notifyChange(uri, null);
         }
         return null;
@@ -88,14 +76,10 @@ public class BookProvider extends ContentProvider {
     @Override
     public int delete(@NonNull Uri uri, @Nullable String selection, @Nullable String[] selectionArgs) {
         Log.d(TAG, "delete()");
-        String tableName = getTabName(uri);
-        if (tableName == null) {
-            throw new IllegalArgumentException("Unsupported uri: " + uri);
-        }
         SQLiteDatabase writableDatabase = mDbHelper.getWritableDatabase();
         int count = 0;
         if (writableDatabase.isOpen()) {
-            count = writableDatabase.delete(tableName, selection, selectionArgs);
+            count = writableDatabase.delete(DbOpenHelper.BOOK_TABLE_NAME, selection, selectionArgs);
             if (count > 0) {
                 getContext().getContentResolver().notifyChange(uri, null);
             }
@@ -106,14 +90,10 @@ public class BookProvider extends ContentProvider {
     @Override
     public int update(@NonNull Uri uri, @Nullable ContentValues values, @Nullable String selection, @Nullable String[] selectionArgs) {
         Log.d(TAG, "update()");
-        String tableName = getTabName(uri);
-        if (tableName == null) {
-            throw new IllegalArgumentException("Unsupported uri: " + uri);
-        }
         int row = 0;
         SQLiteDatabase writableDatabase = mDbHelper.getWritableDatabase();
         if (writableDatabase.isOpen()) {
-            row = writableDatabase.update(tableName, values, selection, selectionArgs);
+            row = writableDatabase.update(DbOpenHelper.BOOK_TABLE_NAME, values, selection, selectionArgs);
             if (row > 0) {
                 getContext().getContentResolver().notifyChange(uri, null);
             }
@@ -121,18 +101,4 @@ public class BookProvider extends ContentProvider {
         return row;
     }
 
-    private String getTabName(Uri uri) {
-        String tableName = null;
-        switch (sUriMatcher.match(uri)) {
-            case BOOK_URI_CODE:
-                tableName = DbOpenHelper.BOOK_TABLE_NAME;
-                break;
-            case USER_URI_CODE:
-                tableName = DbOpenHelper.USER_TABLE_NAME;
-                break;
-            default:
-                break;
-        }
-        return tableName;
-    }
 }
