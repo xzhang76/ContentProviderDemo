@@ -3,13 +3,15 @@ package com.demo.contentproviderdemo.client;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
+import android.os.Message;
 import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.OrientationHelper;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
+import android.widget.Toast;
 
+import com.demo.contentproviderdemo.BaseActivity;
 import com.demo.contentproviderdemo.R;
 import com.demo.contentproviderdemo.provider.BookProvider;
 
@@ -17,7 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+public class MainActivity extends BaseActivity implements View.OnClickListener {
 
     private BookRecyclerViewAdapter mAdapter;
     private List<Book> mBooks = new ArrayList<>();
@@ -37,6 +39,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         layoutManager.setOrientation(OrientationHelper.VERTICAL);
         recyclerView.setAdapter(mAdapter);
         recyclerView.addItemDecoration(new DividerItemDecoration(this, DividerItemDecoration.VERTICAL));
+
+        getContentResolver().registerContentObserver(BookProvider.INSERT_URI, true, mContentObserver);
     }
 
     @Override
@@ -45,7 +49,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (id == R.id.add_book) {
             ContentValues values = new ContentValues();
             int index = new Random().nextInt(100);
-            values.put("_id", index);
+            values.put("_id", 0);
             values.put("name", "Android开发艺术探索" + index);
             values.put("author", "ryg");
             getContentResolver().insert(BookProvider.INSERT_URI, values);
@@ -66,5 +70,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
             mAdapter.updateBooks(mBooks);
         }
+    }
+
+    @Override
+    protected void handleMessage(Message message) {
+        switch (message.what) {
+            case MSG_CONTENT_UPDATE:
+                Toast.makeText(this, "Content Observer, obj = " + message.obj.toString(), Toast.LENGTH_SHORT).show();
+                break;
+            default:
+                break;
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        getContentResolver().unregisterContentObserver(mContentObserver);
+
     }
 }
