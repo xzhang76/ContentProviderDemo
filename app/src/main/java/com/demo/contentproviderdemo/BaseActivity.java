@@ -7,7 +7,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.os.PersistableBundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 
@@ -61,10 +60,11 @@ public abstract class BaseActivity extends AppCompatActivity {
         }
 
         @Override
-        public void onChange(boolean selfChange) {
-            super.onChange(selfChange);
-            Uri uri = ContentUris.withAppendedId(BookProvider.QUERY_ITEM_URI, 0);
-            Cursor bookCursor = getContentResolver().query(uri,
+        public void onChange(boolean selfChange, Uri uri) {
+            super.onChange(selfChange, uri);
+            long id = ContentUris.parseId(uri);
+            Uri queryUri = ContentUris.withAppendedId(BookProvider.QUERY_ITEM_URI, id);
+            Cursor bookCursor = getContentResolver().query(queryUri,
                     new String[]{BookProvider.KEY_ID, BookProvider.KEY_NAME, BookProvider.KEY_AUTHOR}, null, null, null);
             if (bookCursor != null) {
                 while (bookCursor.moveToNext()) {
@@ -75,6 +75,7 @@ public abstract class BaseActivity extends AppCompatActivity {
                     mHandler.handleMessage(msg);
                 }
                 bookCursor.close();
-            }        }
+            }
+        }
     }
 }

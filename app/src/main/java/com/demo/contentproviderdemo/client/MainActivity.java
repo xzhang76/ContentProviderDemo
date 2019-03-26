@@ -9,6 +9,7 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.OrientationHelper;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.demo.contentproviderdemo.BaseActivity;
@@ -24,6 +25,9 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
     private BookRecyclerViewAdapter mAdapter;
     private List<Book> mBooks = new ArrayList<>();
 
+    private TextView mNewBookName;
+    private TextView mNewBookAuthor;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -31,6 +35,9 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
 
         findViewById(R.id.add_book).setOnClickListener(this);
         findViewById(R.id.get_books).setOnClickListener(this);
+
+        mNewBookName = (TextView) findViewById(R.id.last_book_name);
+        mNewBookAuthor = (TextView) findViewById(R.id.last_book_author);
 
         mAdapter = new BookRecyclerViewAdapter(mBooks);
         RecyclerView recyclerView = (RecyclerView) findViewById(R.id.recycler_view_books);
@@ -40,19 +47,24 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         recyclerView.setAdapter(mAdapter);
         recyclerView.addItemDecoration(new DividerItemDecoration(this, DividerItemDecoration.VERTICAL));
 
-        getContentResolver().registerContentObserver(BookProvider.INSERT_URI, true, mContentObserver);
+        getContentResolver().registerContentObserver(BookProvider.BOOK_CONTENT_URI, true, mContentObserver);
     }
 
     @Override
     public void onClick(View v) {
         int id = v.getId();
         if (id == R.id.add_book) {
+            int index = 0;
+            Cursor bookCursor = getContentResolver().query(BookProvider.QUERY_ALL_URI, new String[]{BookProvider.KEY_ID, BookProvider.KEY_NAME, BookProvider.KEY_AUTHOR}, null, null, null);
+            if (bookCursor != null) {
+                index = bookCursor.getCount();
+                bookCursor.close();
+            }
             ContentValues values = new ContentValues();
-            int index = new Random().nextInt(100);
-            values.put("_id", 0);
+            values.put("_id", index);
             values.put("name", "Android开发艺术探索" + index);
             values.put("author", "ryg");
-            getContentResolver().insert(BookProvider.INSERT_URI, values);
+            getContentResolver().insert(BookProvider.BOOK_CONTENT_URI, values);
 
         } else if (id == R.id.get_books) {
             if (mBooks == null) {
@@ -76,7 +88,12 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
     protected void handleMessage(Message message) {
         switch (message.what) {
             case MSG_CONTENT_UPDATE:
-                Toast.makeText(this, "Content Observer, obj = " + message.obj.toString(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "新书到了！", Toast.LENGTH_SHORT).show();
+                if (message.obj != null && message.obj instanceof Book) {
+                    Book newBook = (Book) message.obj;
+                    mNewBookName.setText("new book: " + newBook.mBookName);
+                    mNewBookAuthor.setText(newBook.mBookAuthor);
+                }
                 break;
             default:
                 break;

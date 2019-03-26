@@ -18,23 +18,16 @@ public class BookProvider extends ContentProvider {
 
     public static final String AUTHORITY = "com.demo.contentproviderdemo.provider";
 
-    private static final String PATH_INSERT = "book/insert";
-    private static final String PATH_DELETE = "book/delete";
-    private static final String PATH_UPDATE = "book/update";
     private static final String PATH_QUERY_ITEM = "book/query/#";
     private static final String PATH_QUERY_ALL = "book/query/*";
 
-    public static final Uri INSERT_URI = Uri.parse("content://" + AUTHORITY + "/" + PATH_INSERT);
-    public static final Uri DELETE_URI = Uri.parse("content://" + AUTHORITY + "/" + PATH_DELETE);
-    public static final Uri UPDATE_URI = Uri.parse("content://" + AUTHORITY + "/" + PATH_UPDATE);
+    public static final Uri BOOK_CONTENT_URI = Uri.parse("content://" + AUTHORITY + "/book");
     public static final Uri QUERY_ITEM_URI = Uri.parse("content://" + AUTHORITY + "/" + PATH_QUERY_ITEM);
     public static final Uri QUERY_ALL_URI = Uri.parse("content://" + AUTHORITY + "/" + PATH_QUERY_ALL);
 
-    private static final int INSERT_URI_CODE = 0;
-    private static final int DELETE_URI_CODE = 1;
-    private static final int UPDATE_URI_CODE = 2;
-    private static final int QUERY_ITEM_URI_CODE = 3;
-    private static final int QUERY_ALL_URI_CODE = 4;
+    private static final int BOOK_URI_CODE = 0;
+    private static final int QUERY_ITEM_URI_CODE = 1;
+    private static final int QUERY_ALL_URI_CODE = 2;
 
     public static final String KEY_ID = "_id";
     public static final String KEY_NAME = "name";
@@ -44,9 +37,7 @@ public class BookProvider extends ContentProvider {
 
     //uri和code之间建立对应关系
     static {
-        sUriMatcher.addURI(AUTHORITY, PATH_INSERT, INSERT_URI_CODE);
-        sUriMatcher.addURI(AUTHORITY, PATH_DELETE, DELETE_URI_CODE);
-        sUriMatcher.addURI(AUTHORITY, PATH_UPDATE, UPDATE_URI_CODE);
+        sUriMatcher.addURI(AUTHORITY, "book", BOOK_URI_CODE);
         sUriMatcher.addURI(AUTHORITY, PATH_QUERY_ITEM, QUERY_ITEM_URI_CODE);
         sUriMatcher.addURI(AUTHORITY, PATH_QUERY_ALL, QUERY_ALL_URI_CODE);
 
@@ -121,7 +112,7 @@ public class BookProvider extends ContentProvider {
         Log.d(TAG, "insert()");
         SQLiteDatabase writableDatabase = mDbHelper.getWritableDatabase();
         switch (sUriMatcher.match(uri)) {
-            case INSERT_URI_CODE:
+            case BOOK_URI_CODE:
                 if (writableDatabase.isOpen()) {
                     long id = writableDatabase.insert(DbOpenHelper.BOOK_TABLE_NAME, null, values);
                     writableDatabase.close();
@@ -141,7 +132,7 @@ public class BookProvider extends ContentProvider {
         Log.d(TAG, "delete()");
         SQLiteDatabase writableDatabase = mDbHelper.getWritableDatabase();
         switch (sUriMatcher.match(uri)) {
-            case DELETE_URI_CODE:
+            case BOOK_URI_CODE:
                 int count = 0;
                 if (writableDatabase.isOpen()) {
                     count = writableDatabase.delete(DbOpenHelper.BOOK_TABLE_NAME, selection, selectionArgs);
@@ -163,7 +154,7 @@ public class BookProvider extends ContentProvider {
         Log.d(TAG, "update()");
         SQLiteDatabase writableDatabase = mDbHelper.getWritableDatabase();
         switch (sUriMatcher.match(uri)) {
-            case UPDATE_URI_CODE:
+            case BOOK_URI_CODE:
                 if (writableDatabase.isOpen()) {
                     int row = writableDatabase.update(DbOpenHelper.BOOK_TABLE_NAME, values, selection, selectionArgs);
                     writableDatabase.close();
